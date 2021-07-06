@@ -6,10 +6,15 @@ import useStyles from "./styles";
 
 const CustomizedSnackbar = ({ open, setOpen }) => {
   const classes = useStyles();
+
   const handleClose = (event, reason) => {
-    if (reason === "clickaway") return;
+    if (reason === "clickaway") {
+      return;
+    }
+
     setOpen(false);
   };
+
   return (
     <div className={classes.root}>
       <Snackbar
@@ -20,15 +25,15 @@ const CustomizedSnackbar = ({ open, setOpen }) => {
       >
         <MuiAlert
           onClose={handleClose}
-          severity={"success"}
+          severity="success"
           elevation={6}
           variant="filled"
         >
-          Transaction successfully created!
+          Transaction successfully created.
         </MuiAlert>
       </Snackbar>
     </div>
   );
 };
 
-export default Snackbar;
+export default CustomizedSnackbar;

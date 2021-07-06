@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
-import CustomizedSnackbar from "../../Snackbar/Snackbar";
+import React, { useState, useContext, useEffect } from "react";
 import {
   TextField,
   Typography,
@@ -10,15 +9,17 @@ import {
   Select,
   MenuItem,
 } from "@material-ui/core";
-import { ExpenseTrackerContext } from "../../../context/context";
 import { v4 as uuidv4 } from "uuid";
+
 import { useSpeechContext } from "@speechly/react-client";
+import Snackbar from "../../Snackbar/Snackbar";
 import formatDate from "../../../utils/formatDate";
-import useStyles from "./styles";
+import { ExpenseTrackerContext } from "../../../context/context";
 import {
   incomeCategories,
   expenseCategories,
 } from "../../../constants/categories";
+import useStyles from "./styles";
 
 const initialState = {
   amount: "",
@@ -27,22 +28,31 @@ const initialState = {
   date: formatDate(new Date()),
 };
 
-const Form = () => {
+const NewTransactionForm = () => {
   const classes = useStyles();
-  const [formData, setFormData] = useState(initialState);
   const { addTransaction } = useContext(ExpenseTrackerContext);
+  const [formData, setFormData] = useState(initialState);
   const { segment } = useSpeechContext();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = React.useState(false);
+
   const createTransaction = () => {
-    if (Number.isNaN(Number(formData.amount) || !formData.date.includes("-")))
+    if (Number.isNaN(Number(formData.amount)) || !formData.date.includes("-"))
       return;
-    const transaction = {
+
+    if (incomeCategories.map((iC) => iC.type).includes(formData.category)) {
+      setFormData({ ...formData, type: "Income" });
+    } else if (
+      expenseCategories.map((iC) => iC.type).includes(formData.category)
+    ) {
+      setFormData({ ...formData, type: "Expense" });
+    }
+
+    setOpen(true);
+    addTransaction({
       ...formData,
       amount: Number(formData.amount),
       id: uuidv4(),
-    };
-    setOpen(true);
-    addTransaction(transaction);
+    });
     setFormData(initialState);
   };
 
@@ -54,7 +64,7 @@ const Form = () => {
         setFormData({ ...formData, type: "Income" });
       } else if (
         segment.isFinal &&
-        segment.intent.intent === "create_transation"
+        segment.intent.intent === "create_transaction"
       ) {
         return createTransaction();
       } else if (
@@ -64,11 +74,14 @@ const Form = () => {
         return setFormData(initialState);
       }
 
-      segment.entities.forEach((e) => {
-        const category = `${e.value.charAt(0)}${e.value.slice(1).toLowerCase}`;
-        switch (e.type) {
+      segment.entities.forEach((s) => {
+        const category = `${s.value.charAt(0)}${s.value
+          .slice(1)
+          .toLowerCase()}`;
+
+        switch (s.type) {
           case "amount":
-            setFormData({ ...formData, amount: e.value });
+            setFormData({ ...formData, amount: s.value });
             break;
           case "category":
             if (incomeCategories.map((iC) => iC.type).includes(category)) {
@@ -78,10 +91,9 @@ const Form = () => {
             ) {
               setFormData({ ...formData, type: "Expense", category });
             }
-
             break;
           case "date":
-            setFormData({ ...formData, date: e.value });
+            setFormData({ ...formData, date: s.value });
             break;
           default:
             break;
@@ -102,12 +114,18 @@ const Form = () => {
 
   const selectedCategories =
     formData.type === "Income" ? incomeCategories : expenseCategories;
+
   return (
     <Grid container spacing={2}>
-      <CustomizedSnackbar open={open} setOpen={setOpen} />
+      <Snackbar open={open} setOpen={setOpen} />
       <Grid item xs={12}>
         <Typography align="center" variant="subtitle2" gutterBottom>
-          {segment && segment.words.map((word) => word.value).join(" ")}
+          {segment ? (
+            <div className="segment">
+              {segment.words.map((w) => w.value).join(" ")}
+            </div>
+          ) : null}
+          {/* {isSpeaking ? <BigTranscript /> : 'Start adding transactions'}  */}
         </Typography>
       </Grid>
       <Grid item xs={6}>
@@ -139,20 +157,21 @@ const Form = () => {
           </Select>
         </FormControl>
       </Grid>
+
       <Grid item xs={6}>
         <TextField
           type="number"
           label="Amount"
-          fullWidth
           value={formData.amount}
           onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+          fullWidth
         />
       </Grid>
       <Grid item xs={6}>
         <TextField
-          type="date"
-          label="Date"
           fullWidth
+          label="Date"
+          type="date"
           value={formData.date}
           onChange={(e) =>
             setFormData({ ...formData, date: formatDate(e.target.value) })
@@ -172,4 +191,4 @@ const Form = () => {
   );
 };
 
-export default Form;
+export default NewTransactionForm;
